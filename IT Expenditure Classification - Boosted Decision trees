@@ -1,0 +1,87 @@
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import validation_curve, learning_curve
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Load the dataset
+file_path = 'IT_Expenditure_Data_Classification.csv'
+it_expenditure_noisy_df = pd.read_csv(file_path)
+
+# Preprocess the data
+one_hot_encoder = OneHotEncoder()
+scaler = StandardScaler()
+X_categorical_encoded = one_hot_encoder.fit_transform(it_expenditure_noisy_df[['Company Size', 'Sector']]).toarray()
+X_numerical_scaled = scaler.fit_transform(it_expenditure_noisy_df.drop(columns=['Company Size', 'Sector', 'Rating']))
+X_combined = np.hstack((X_categorical_encoded, X_numerical_scaled))
+y = it_expenditure_noisy_df['Rating']
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(X_combined, y, test_size=0.2, random_state=42)
+
+# Initialize AdaBoost with Decision Trees as the base estimator
+ada_boost = AdaBoostClassifier(
+    base_estimator=DecisionTreeClassifier(max_depth=1),
+    n_estimators=50,
+    random_state=42
+)
+
+# Train the AdaBoost model
+ada_boost.fit(X_train, y_train)
+
+# Evaluate the model
+y_pred_ada = ada_boost.predict(X_test)
+print('Classification Report for Boosted Decision Trees (IT Expenditure Classification)')
+print(classification_report(y_test, y_pred_ada))
+
+# Corrected plot_learning_curve function
+def plot_learning_curve(estimator, title, X, y, cv=5, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.grid()
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std, test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plot the learning curve
+plot_learning_curve(ada_boost, "Learning Curve for AdaBoost (IT Expenditure Classification)", X_train, y_train)
+
+# Function to plot model complexity curve
+def plot_model_complexity_curve(param_range, train_scores, test_scores, title):
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel("Number of Estimators")
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.plot(param_range, train_scores_mean, 'o-',label="Training score", color="r")
+    plt.fill_between(param_range, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.plot(param_range, test_scores_mean, 'o-',label="Cross-validation score", color="g")
+    plt.fill_between(param_range, test_scores_mean - test_scores_std, test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plot the validation curve for AdaBoost 'n_estimators' parameter
+n_estimators_range = np.arange(10, 110, 10)
+train_scores, test_scores = validation_curve(
+    ada_boost, X_train, y_train, param_name="n_estimators", param_range=n_estimators_range, cv=5, scoring="accuracy", n_jobs=-1)
+plot_model_complexity_curve(n_estimators_range, train_scores, test_scores, "AdaBoost Model Complexity - Number of Estimators (IT Expenditure Classification)")
