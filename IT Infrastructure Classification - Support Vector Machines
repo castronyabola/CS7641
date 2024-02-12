@@ -1,0 +1,96 @@
+# Adapting the code to work with the IT Infrastructure dataset using SVM classifiers.
+
+from sklearn.svm import SVC
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split, learning_curve, validation_curve
+from sklearn.metrics import classification_report
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+file_path = 'IT_Infrastructure_Data_Modified.csv'  # Adjust path as needed
+df_infrastructure = pd.read_csv(file_path)
+
+# Preprocess the data: One-hot encode categorical variables
+one_hot_encoder = OneHotEncoder()
+X = one_hot_encoder.fit_transform(df_infrastructure.drop('Rating', axis=1))
+y = df_infrastructure['Rating']
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# SVM with RBF kernel
+svm_rbf = SVC(C=1.0, kernel='rbf', gamma='scale', random_state=42)
+svm_rbf.fit(X_train, y_train)
+y_pred_rbf = svm_rbf.predict(X_test)
+print("Classification Report for SVM with RBF Kernel (IT Infrastructure Classification):")
+print(classification_report(y_test, y_pred_rbf))
+
+# SVM with Linear kernel
+svm_linear = SVC(C=1.0, kernel='linear', random_state=42)
+svm_linear.fit(X_train, y_train)
+y_pred_linear = svm_linear.predict(X_test)
+print("\nClassification Report for SVM with Linear Kernel (IT Infrastructure Classification):")
+print(classification_report(y_test, y_pred_linear))
+
+# Plot learning curve function
+def plot_learning_curve(estimator, title, X, y, cv=5, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.grid()
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plot learning curves for SVM classifiers
+plot_learning_curve(svm_rbf, "Learning Curve for SVM with RBF Kernel (IT Infrastructure Classification)", X_train, y_train)
+plot_learning_curve(svm_linear, "Learning Curve for SVM with Linear Kernel (IT Infrastructure Classification)", X_train, y_train)
+
+# Plot validation curve function
+def plot_validation_curve(estimator, X, y, param_name, param_range, title, cv=5, n_jobs=None):
+    train_scores, test_scores = validation_curve(
+        estimator, X, y, param_name=param_name, param_range=param_range, cv=cv, scoring="accuracy", n_jobs=n_jobs)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel(param_name)
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.grid()
+    plt.plot(param_range, train_scores_mean, 'o-',label="Training score", color="r")
+    plt.fill_between(param_range, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.plot(param_range, test_scores_mean,'o-', label="Cross-validation score", color="g")
+    plt.fill_between(param_range, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.legend(loc="best")
+    plt.show()
+
+# C parameter range for validation curves
+C_range = np.logspace(-2, 2, 5)
+
+# Plotting Validation Curves for 'C' hyperparameter with RBF kernel
+plot_validation_curve(svm_rbf, X_train, y_train, "C", C_range, "Validation Curve for SVM (RBF Kernel) - C parameter (IT Infrastructure Classification)")
+
+# Plotting Validation Curves for 'C' hyperparameter with Linear kernel
+plot_validation_curve(svm_linear, X_train, y_train, "C", C_range, "Validation Curve for SVM (Linear Kernel) - C parameter (IT Infrastructure Classification)")
