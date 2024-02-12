@@ -1,0 +1,86 @@
+# Adapting the code to work with the IT Infrastructure dataset using KNeighborsClassifier.
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import validation_curve, learning_curve, train_test_split
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the dataset
+file_path = 'IT_Infrastructure_Data_Modified.csv'  # Adjust path as needed
+it_infrastructure_df = pd.read_csv(file_path)
+
+# Preprocess the data: One-hot encode categorical variables
+one_hot_encoder = OneHotEncoder()
+X = one_hot_encoder.fit_transform(it_infrastructure_df.drop('Rating', axis=1))
+y = it_infrastructure_df['Rating']
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define a range for 'k' (number of neighbors)
+k_range = np.arange(1, 31)
+
+# Train k-NN Classifier and evaluate for different values of 'k'
+for k in k_range:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train, y_train)
+    y_pred_knn = knn.predict(X_test)
+    print(f"\nClassification Report for k-NN with k={k} (IT Infrastructure Classification):")
+    print(classification_report(y_test, y_pred_knn))
+
+# Function to plot learning curve
+def plot_learning_curve(estimator, title, X, y, cv=5, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.grid()
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plot learning curve for k-NN with 5 neighbors as an example
+plot_learning_curve(KNeighborsClassifier(n_neighbors=5), "Learning Curve for k-NN (IT Infrastructure Classification)", X_train, y_train)
+
+# Function to plot validation curve
+def plot_knn_validation_curve(X, y, k_range, title, cv=5):
+    train_scores, test_scores = validation_curve(
+        KNeighborsClassifier(), X, y, param_name="n_neighbors", param_range=k_range, cv=cv, scoring="accuracy", n_jobs=-1)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.title(title)
+    plt.xlabel("Number of Neighbors")
+    plt.ylabel("Score")
+    plt.ylim(0.7, 1.01)
+    plt.grid()
+    plt.plot(k_range, train_scores_mean, 'o-',label="Training score", color="r")
+    plt.fill_between(k_range, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.plot(k_range, test_scores_mean, 'o-',label="Cross-validation score", color="g")
+    plt.fill_between(k_range, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plot validation curve for k-NN
+plot_knn_validation_curve(X_train, y_train, k_range, "Validation Curve for k-NN (IT Infrastructure Classification)")
