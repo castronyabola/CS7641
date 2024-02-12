@@ -1,0 +1,82 @@
+# Let's adapt the code to work with the IT Infrastructure dataset.
+
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split, learning_curve, validation_curve
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+file_path = 'IT_Infrastructure_Data_Modified.csv'  # Replace with your dataset file path
+it_infrastructure_df = pd.read_csv(file_path)
+
+# Preprocess the data: One-hot encode categorical variables
+one_hot_encoder = OneHotEncoder()
+X = one_hot_encoder.fit_transform(it_infrastructure_df.drop('Rating', axis=1))
+y = it_infrastructure_df['Rating']
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train the Decision Tree model using Entropy
+decision_tree = DecisionTreeClassifier(criterion='entropy', random_state=42)
+decision_tree.fit(X_train, y_train)
+
+# Evaluate the model
+y_pred = decision_tree.predict(X_test)
+print('Classification Report for Decision Trees (IT Infrastructure Classification)')
+print(classification_report(y_test, y_pred))
+
+# Function to plot learning curves
+def plot_learning_curve(estimator, X, y, cv=5, n_jobs=4, train_sizes=np.linspace(.1, 1.0, 5)):
+    train_sizes, train_scores, test_scores, fit_times, _ = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes, return_times=True)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.grid()
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+    plt.title("Decision Trees Learning Curve (IT Infrastructure Classification)")
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plotting the learning curve
+plot_learning_curve(decision_tree, X, y)
+
+# Function to plot model complexity graph for 'max_depth'
+def plot_model_complexity_graph(estimator, X, y, cv=5, n_jobs=4, max_depth_range=np.arange(1, 15)):
+    train_scores, test_scores = validation_curve(
+        estimator, X, y, param_name="max_depth", param_range=max_depth_range, cv=cv, scoring='accuracy', n_jobs=n_jobs)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(10, 6))
+    plt.grid()
+    plt.fill_between(max_depth_range, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1, color="r")
+    plt.fill_between(max_depth_range, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(max_depth_range, train_scores_mean, 'o-', color="r", label="Training score")
+    plt.plot(max_depth_range, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+    plt.title("Decision Trees Model Complexity - Max Depth (IT Infrastructure Classification)")
+    plt.xlabel("Max Depth")
+    plt.ylabel("Score")
+    plt.legend(loc="best")
+    plt.show()
+
+# Plotting model complexity graph for 'max_depth'
+plot_model_complexity_graph(decision_tree, X, y)
